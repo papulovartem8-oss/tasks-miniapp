@@ -517,11 +517,24 @@ function updateMainButton() {
 
 function syncDeadlines() {
     if (!tg || pendingDeadlines.length === 0) return;
-    const data = JSON.stringify({
-        action: 'sync_deadlines',
-        deadlines: pendingDeadlines
-    });
-    tg.sendData(data);
+    pendingDeadlines = [];
+    tg.MainButton.hide();
+    haptic('notification', 'success');
+    showToast('Напоминания сохранены');
+}
+
+function showToast(text) {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = text;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('toast--visible'), 10);
+    setTimeout(() => {
+        toast.classList.remove('toast--visible');
+        setTimeout(() => toast.remove(), 300);
+    }, 2000);
 }
 
 function haptic(type, style) {

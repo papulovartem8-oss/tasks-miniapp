@@ -845,3 +845,27 @@ body {
     transform: translateY(8px);
     transition: all 0.2s var(--transition);
 }
+
+/* Toast */
+
+.toast {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-20px);
+    background: var(--accent);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 50;
+    opacity: 0;
+    transition: all 0.3s var(--spring);
+    pointer-events: none;
+}
+
+.toast--visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
