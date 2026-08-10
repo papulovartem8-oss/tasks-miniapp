@@ -779,6 +779,10 @@ body {
     border-left: 3px solid #FF3B30;
 }
 
+.task--medium {
+    border-left: 3px solid #FFCC00;
+}
+
 .task__priority-dot {
     width: 6px;
     height: 6px;
@@ -786,6 +790,10 @@ body {
     background: #FF3B30;
     flex-shrink: 0;
     animation: priorityPulse 2s ease infinite;
+}
+
+.task__priority-dot--medium {
+    background: #FFCC00;
 }
 
 @keyframes priorityPulse {
@@ -796,6 +804,11 @@ body {
 .task--done .task__priority-dot {
     background: var(--silver);
     animation: none;
+}
+
+.sheet__priority--medium {
+    background: #FFCC00;
+    color: white;
 }
 
 /* Progress bar (in header stats) */

@@ -24,7 +24,7 @@ let calendarOffset = 0;
 let tasks = [];
 let isSheetOpen = false;
 let idCounter = Date.now();
-let newTaskImportant = false;
+let newTaskPriority = 0;
 let newTaskDeadline = null;
 let pendingDeadlines = [];
 let editingTask = null;
@@ -69,9 +69,17 @@ deadlineClear.addEventListener('click', clearDeadline);
 deadlineInput.addEventListener('change', onDeadlineChange);
 
 function togglePriority() {
-    newTaskImportant = !newTaskImportant;
-    priorityBtn.classList.toggle('sheet__priority--active', newTaskImportant);
+    newTaskPriority = (newTaskPriority + 1) % 3;
+    priorityBtn.classList.remove('sheet__priority--medium', 'sheet__priority--active');
+    if (newTaskPriority === 1) priorityBtn.classList.add('sheet__priority--medium');
+    if (newTaskPriority === 2) priorityBtn.classList.add('sheet__priority--active');
     haptic('impact', 'light');
+}
+
+function taskPriority(task) {
+    if (task.priority !== undefined) return task.priority;
+    if (task.important) return 2;
+    return 0;
 }
 
 function toggleDeadlinePicker() {
@@ -243,10 +251,11 @@ function loadTasks() {
 }
 
 function sortTasks(list) {
-    const importantUndone = list.filter(t => t.important && !t.completed);
-    const normalUndone = list.filter(t => !t.important && !t.completed);
+    const highUndone = list.filter(t => taskPriority(t) === 2 && !t.completed);
+    const medUndone = list.filter(t => taskPriority(t) === 1 && !t.completed);
+    const normalUndone = list.filter(t => taskPriority(t) === 0 && !t.completed);
     const done = list.filter(t => t.completed);
-    return [...importantUndone, ...normalUndone, ...done];
+    return [...highUndone, ...medUndone, ...normalUndone, ...done];
 }
 
 function renderTasks() {
@@ -272,11 +281,15 @@ function renderTasks() {
 function createTaskElement(task) {
     const el = document.createElement('div');
     el.className = 'task';
+    const prio = taskPriority(task);
     if (task.completed) el.classList.add('task--done');
-    if (task.important) el.classList.add('task--important');
+    if (prio === 2) el.classList.add('task--important');
+    if (prio === 1) el.classList.add('task--medium');
     el.dataset.id = task.id;
 
-    const priorityDot = task.important ? '<div class="task__priority-dot"></div>' : '';
+    let priorityDot = '';
+    if (prio === 2) priorityDot = '<div class="task__priority-dot"></div>';
+    if (prio === 1) priorityDot = '<div class="task__priority-dot task__priority-dot--medium"></div>';
 
     let deadlineHtml = '';
     if (task.deadline) {
@@ -321,8 +334,10 @@ function editTask(task) {
     taskInput.value = task.text;
     taskInput.placeholder = 'Редактировать...';
 
-    newTaskImportant = task.important || false;
-    priorityBtn.classList.toggle('sheet__priority--active', newTaskImportant);
+    newTaskPriority = taskPriority(task);
+    priorityBtn.classList.remove('sheet__priority--medium', 'sheet__priority--active');
+    if (newTaskPriority === 1) priorityBtn.classList.add('sheet__priority--medium');
+    if (newTaskPriority === 2) priorityBtn.classList.add('sheet__priority--active');
 
     if (task.deadline) {
         newTaskDeadline = task.deadline;
@@ -340,7 +355,8 @@ function addTask() {
 
     if (editingTask) {
         editingTask.text = text;
-        editingTask.important = newTaskImportant;
+        editingTask.priority = newTaskPriority;
+        editingTask.important = newTaskPriority === 2;
         editingTask.deadline = newTaskDeadline || null;
 
         if (editingTask.deadline) {
@@ -348,7 +364,7 @@ function addTask() {
                 text: editingTask.text,
                 deadline: editingTask.deadline,
                 date: editingTask.date,
-                important: editingTask.important
+                important: editingTask.priority === 2
             });
             updateMainButton();
         }
@@ -358,8 +374,7 @@ function addTask() {
         haptic('notification', 'success');
         editingTask = null;
         taskInput.value = '';
-        newTaskImportant = false;
-        priorityBtn.classList.remove('sheet__priority--active');
+        resetPriorityBtn();
         clearDeadline();
         closeSheet();
         return;
@@ -373,7 +388,8 @@ function addTask() {
         text,
         date: formatDate(selectedDate),
         completed: false,
-        important: newTaskImportant,
+        priority: newTaskPriority,
+        important: newTaskPriority === 2,
         deadline: newTaskDeadline || null
     };
     tasks.push(task);
@@ -388,13 +404,12 @@ function addTask() {
             text: task.text,
             deadline: task.deadline,
             date: task.date,
-            important: task.important
+            important: task.priority === 2
         });
         updateMainButton();
     }
 
-    newTaskImportant = false;
-    priorityBtn.classList.remove('sheet__priority--active');
+    resetPriorityBtn();
     clearDeadline();
 
     sendBtn.disabled = false;
@@ -465,10 +480,14 @@ function closeSheet() {
     taskInput.blur();
     taskInput.value = '';
     taskInput.placeholder = 'Новая задача...';
-    newTaskImportant = false;
     editingTask = null;
-    priorityBtn.classList.remove('sheet__priority--active');
+    resetPriorityBtn();
     clearDeadline();
+}
+
+function resetPriorityBtn() {
+    newTaskPriority = 0;
+    priorityBtn.classList.remove('sheet__priority--medium', 'sheet__priority--active');
 }
 
 function showEmpty(visible) {
