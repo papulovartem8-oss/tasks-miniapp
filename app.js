@@ -27,6 +27,7 @@ let idCounter = Date.now();
 let newTaskImportant = false;
 let newTaskDeadline = null;
 let pendingDeadlines = [];
+let editingTask = null;
 
 const taskList = document.getElementById('taskList');
 const emptyState = document.getElementById('emptyState');
@@ -305,6 +306,7 @@ function createTaskElement(task) {
     `;
 
     el.querySelector('.task__check').addEventListener('click', () => toggleTask(task, el));
+    el.querySelector('.task__body').addEventListener('click', () => editTask(task));
     el.querySelector('.task__delete').addEventListener('click', (e) => {
         e.stopPropagation();
         deleteTask(task, el);
@@ -313,9 +315,55 @@ function createTaskElement(task) {
     return el;
 }
 
+function editTask(task) {
+    editingTask = task;
+    openSheet();
+    taskInput.value = task.text;
+    taskInput.placeholder = 'Редактировать...';
+
+    newTaskImportant = task.important || false;
+    priorityBtn.classList.toggle('sheet__priority--active', newTaskImportant);
+
+    if (task.deadline) {
+        newTaskDeadline = task.deadline;
+        deadlineRow.classList.add('sheet__deadline-row--visible');
+        deadlineBtn.classList.add('sheet__deadline-btn--active');
+        deadlineInput.value = toLocalISO(new Date(task.deadline));
+    } else {
+        clearDeadline();
+    }
+}
+
 function addTask() {
     const text = taskInput.value.trim();
     if (!text) return;
+
+    if (editingTask) {
+        editingTask.text = text;
+        editingTask.important = newTaskImportant;
+        editingTask.deadline = newTaskDeadline || null;
+
+        if (editingTask.deadline) {
+            pendingDeadlines.push({
+                text: editingTask.text,
+                deadline: editingTask.deadline,
+                date: editingTask.date,
+                important: editingTask.important
+            });
+            updateMainButton();
+        }
+
+        renderTasks();
+        saveTasks(formatDate(selectedDate), tasks);
+        haptic('notification', 'success');
+        editingTask = null;
+        taskInput.value = '';
+        newTaskImportant = false;
+        priorityBtn.classList.remove('sheet__priority--active');
+        clearDeadline();
+        closeSheet();
+        return;
+    }
 
     taskInput.value = '';
     sendBtn.disabled = true;
@@ -415,7 +463,10 @@ function closeSheet() {
     addSheet.classList.remove('sheet--open');
     fabBtn.classList.remove('fab--open');
     taskInput.blur();
+    taskInput.value = '';
+    taskInput.placeholder = 'Новая задача...';
     newTaskImportant = false;
+    editingTask = null;
     priorityBtn.classList.remove('sheet__priority--active');
     clearDeadline();
 }
