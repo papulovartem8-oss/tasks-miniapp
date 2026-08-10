@@ -1,12 +1,7 @@
-const API_URL = '';
-
 const tg = window.Telegram?.WebApp;
-if (tg) {
-    tg.ready();
-    tg.expand();
-}
+if (tg) { tg.ready(); tg.expand(); }
 
-const DEMO_MODE = !tg;
+const DEMO_MODE = !tg?.CloudStorage;
 
 const WEEKDAYS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const MONTHS = [
@@ -18,8 +13,8 @@ let selectedDate = new Date();
 let calendarOffset = 0;
 let tasks = [];
 let isSheetOpen = false;
+let idCounter = Date.now();
 
-// Elements
 const taskList = document.getElementById('taskList');
 const emptyState = document.getElementById('emptyState');
 const loading = document.getElementById('loading');
@@ -35,39 +30,15 @@ const sheetOverlay = document.getElementById('sheetOverlay');
 const taskInput = document.getElementById('taskInput');
 const sendBtn = document.getElementById('sendBtn');
 
-// Init
 renderCalendar();
 loadTasks();
 
-// Calendar navigation
-calLeft.addEventListener('click', () => {
-    calendarOffset -= 7;
-    renderCalendar();
-});
-
-calRight.addEventListener('click', () => {
-    calendarOffset += 7;
-    renderCalendar();
-});
-
-// FAB & Sheet
-fabBtn.addEventListener('click', () => {
-    if (isSheetOpen) {
-        closeSheet();
-    } else {
-        openSheet();
-    }
-});
-
+calLeft.addEventListener('click', () => { calendarOffset -= 7; renderCalendar(); });
+calRight.addEventListener('click', () => { calendarOffset += 7; renderCalendar(); });
+fabBtn.addEventListener('click', () => { isSheetOpen ? closeSheet() : openSheet(); });
 sheetOverlay.addEventListener('click', closeSheet);
-
-taskInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') addTask();
-});
-
+taskInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTask(); });
 sendBtn.addEventListener('click', addTask);
-
-// Functions
 
 function formatDate(date) {
     const y = date.getFullYear();
@@ -91,6 +62,29 @@ function isSameDay(a, b) {
     return a.getDate() === b.getDate()
         && a.getMonth() === b.getMonth()
         && a.getFullYear() === b.getFullYear();
+}
+
+function storageKey(dateStr) {
+    return `tasks_${dateStr}`;
+}
+
+function saveTasks(dateStr, taskArray) {
+    if (DEMO_MODE) return;
+    const key = storageKey(dateStr);
+    const val = JSON.stringify(taskArray);
+    tg.CloudStorage.setItem(key, val, (err) => {
+        if (err) console.error('CloudStorage save error:', err);
+    });
+}
+
+function loadTasksFromStorage(dateStr, callback) {
+    if (DEMO_MODE) { callback([]); return; }
+    const key = storageKey(dateStr);
+    tg.CloudStorage.getItem(key, (err, val) => {
+        if (err || !val) { callback([]); return; }
+        try { callback(JSON.parse(val)); }
+        catch (_) { callback([]); }
+    });
 }
 
 function renderCalendar() {
@@ -133,7 +127,7 @@ function selectDate(date) {
     haptic('impact', 'light');
 }
 
-async function loadTasks() {
+function loadTasks() {
     const dateStr = formatDate(selectedDate);
     headerDate.textContent = formatDisplayDate(selectedDate);
 
@@ -147,17 +141,11 @@ async function loadTasks() {
     showEmpty(false);
     taskList.innerHTML = '';
 
-    try {
-        const data = await api('GET', `/api/tasks?date=${dateStr}`);
+    loadTasksFromStorage(dateStr, (data) => {
         tasks = data;
         renderTasks();
-    } catch (e) {
-        console.error('Failed to load tasks:', e);
-        tasks = [];
-        renderTasks();
-    }
-
-    showLoading(false);
+        showLoading(false);
+    });
 }
 
 function renderTasks() {
@@ -210,50 +198,29 @@ function createTaskElement(task) {
     return el;
 }
 
-let demoIdCounter = 1;
-
-async function addTask() {
+function addTask() {
     const text = taskInput.value.trim();
     if (!text) return;
 
     taskInput.value = '';
     sendBtn.disabled = true;
 
-    if (DEMO_MODE) {
-        const task = { id: demoIdCounter++, text, date: formatDate(selectedDate), completed: false };
-        tasks.push(task);
-        showEmpty(false);
-        const el = createTaskElement(task);
-        taskList.appendChild(el);
-        updateStats();
-        haptic('notification', 'success');
-        sendBtn.disabled = false;
-        closeSheet();
-        return;
-    }
+    const task = { id: idCounter++, text, date: formatDate(selectedDate), completed: false };
+    tasks.push(task);
+    showEmpty(false);
 
-    try {
-        const task = await api('POST', '/api/tasks', {
-            text,
-            date: formatDate(selectedDate)
-        });
-        tasks.push(task);
-        showEmpty(false);
+    const el = createTaskElement(task);
+    taskList.appendChild(el);
+    updateStats();
+    haptic('notification', 'success');
 
-        const el = createTaskElement(task);
-        taskList.appendChild(el);
-        updateStats();
-        haptic('notification', 'success');
-    } catch (e) {
-        console.error('Failed to add task:', e);
-        taskInput.value = text;
-    }
+    saveTasks(task.date, tasks);
 
     sendBtn.disabled = false;
     closeSheet();
 }
 
-async function toggleTask(task, el) {
+function toggleTask(task, el) {
     task.completed = !task.completed;
     el.classList.toggle('task--done');
     el.classList.add('task--completing');
@@ -262,36 +229,20 @@ async function toggleTask(task, el) {
 
     haptic('impact', task.completed ? 'medium' : 'light');
 
-    if (DEMO_MODE) return;
-
-    try {
-        await api('PATCH', `/api/tasks/${task.id}`, { completed: task.completed });
-    } catch (e) {
-        task.completed = !task.completed;
-        el.classList.toggle('task--done');
-        updateStats();
-    }
+    saveTasks(formatDate(selectedDate), tasks);
 }
 
-async function deleteTask(task, el) {
+function deleteTask(task, el) {
     el.classList.add('task--removing');
     haptic('impact', 'light');
 
-    setTimeout(async () => {
+    setTimeout(() => {
         el.remove();
         tasks = tasks.filter(t => t.id !== task.id);
         updateStats();
         if (tasks.length === 0) showEmpty(true);
 
-        if (DEMO_MODE) return;
-
-        try {
-            await api('DELETE', `/api/tasks/${task.id}`);
-        } catch (e) {
-            console.error('Failed to delete task:', e);
-            tasks.push(task);
-            renderTasks();
-        }
+        saveTasks(formatDate(selectedDate), tasks);
     }, 350);
 }
 
@@ -355,22 +306,4 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
-}
-
-async function api(method, path, body = null) {
-    const url = API_URL + path;
-    const opts = {
-        method,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': tg?.initData || ''
-        }
-    };
-    if (body) opts.body = JSON.stringify(body);
-
-    const res = await fetch(url, opts);
-    if (!res.ok) {
-        throw new Error(`API ${res.status}`);
-    }
-    return res.json();
 }
