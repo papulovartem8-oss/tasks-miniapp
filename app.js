@@ -20,6 +20,7 @@ let calendarOffset = 0;
 let tasks = [];
 let isSheetOpen = false;
 let idCounter = Date.now();
+let newTaskImportant = false;
 
 const taskList = document.getElementById('taskList');
 const emptyState = document.getElementById('emptyState');
@@ -35,6 +36,7 @@ const addSheet = document.getElementById('addSheet');
 const sheetOverlay = document.getElementById('sheetOverlay');
 const taskInput = document.getElementById('taskInput');
 const sendBtn = document.getElementById('sendBtn');
+const priorityBtn = document.getElementById('priorityBtn');
 
 renderCalendar();
 loadTasks();
@@ -45,6 +47,13 @@ fabBtn.addEventListener('click', () => { isSheetOpen ? closeSheet() : openSheet(
 sheetOverlay.addEventListener('click', closeSheet);
 taskInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTask(); });
 sendBtn.addEventListener('click', addTask);
+priorityBtn.addEventListener('click', togglePriority);
+
+function togglePriority() {
+    newTaskImportant = !newTaskImportant;
+    priorityBtn.classList.toggle('sheet__priority--active', newTaskImportant);
+    haptic('impact', 'light');
+}
 
 function formatDate(date) {
     const y = date.getFullYear();
@@ -154,6 +163,13 @@ function loadTasks() {
     });
 }
 
+function sortTasks(list) {
+    const importantUndone = list.filter(t => t.important && !t.completed);
+    const normalUndone = list.filter(t => !t.important && !t.completed);
+    const done = list.filter(t => t.completed);
+    return [...importantUndone, ...normalUndone, ...done];
+}
+
 function renderTasks() {
     taskList.innerHTML = '';
     updateStats();
@@ -165,9 +181,7 @@ function renderTasks() {
 
     showEmpty(false);
 
-    const uncompleted = tasks.filter(t => !t.completed);
-    const completed = tasks.filter(t => t.completed);
-    const sorted = [...uncompleted, ...completed];
+    const sorted = sortTasks(tasks);
 
     sorted.forEach((task, i) => {
         const el = createTaskElement(task);
@@ -178,8 +192,12 @@ function renderTasks() {
 
 function createTaskElement(task) {
     const el = document.createElement('div');
-    el.className = `task${task.completed ? ' task--done' : ''}`;
+    el.className = 'task';
+    if (task.completed) el.classList.add('task--done');
+    if (task.important) el.classList.add('task--important');
     el.dataset.id = task.id;
+
+    const priorityDot = task.important ? '<div class="task__priority-dot"></div>' : '';
 
     el.innerHTML = `
         <div class="task__check">
@@ -187,6 +205,7 @@ function createTaskElement(task) {
                 <path d="M2.5 7.5L5.5 10.5L11.5 3.5" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         </div>
+        ${priorityDot}
         <span class="task__text">${escapeHtml(task.text)}</span>
         <button class="task__delete" aria-label="Удалить">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -211,16 +230,22 @@ function addTask() {
     taskInput.value = '';
     sendBtn.disabled = true;
 
-    const task = { id: idCounter++, text, date: formatDate(selectedDate), completed: false };
+    const task = {
+        id: idCounter++,
+        text,
+        date: formatDate(selectedDate),
+        completed: false,
+        important: newTaskImportant
+    };
     tasks.push(task);
-    showEmpty(false);
 
-    const el = createTaskElement(task);
-    taskList.appendChild(el);
-    updateStats();
+    renderTasks();
     haptic('notification', 'success');
 
     saveTasks(task.date, tasks);
+
+    newTaskImportant = false;
+    priorityBtn.classList.remove('sheet__priority--active');
 
     sendBtn.disabled = false;
     closeSheet();
@@ -288,6 +313,8 @@ function closeSheet() {
     addSheet.classList.remove('sheet--open');
     fabBtn.classList.remove('fab--open');
     taskInput.blur();
+    newTaskImportant = false;
+    priorityBtn.classList.remove('sheet__priority--active');
 }
 
 function showEmpty(visible) {

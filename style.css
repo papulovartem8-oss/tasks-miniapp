@@ -616,6 +616,55 @@ body {
     cursor: default;
 }
 
+.sheet__priority {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: var(--card);
+    color: var(--silver);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s var(--spring);
+    flex-shrink: 0;
+}
+
+.sheet__priority:active {
+    transform: scale(0.88);
+}
+
+.sheet__priority--active {
+    background: #FF3B30;
+    color: white;
+}
+
+/* Task priority */
+
+.task--important {
+    border-left: 3px solid #FF3B30;
+}
+
+.task__priority-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #FF3B30;
+    flex-shrink: 0;
+    animation: priorityPulse 2s ease infinite;
+}
+
+@keyframes priorityPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+.task--done .task__priority-dot {
+    background: var(--silver);
+    animation: none;
+}
+
 /* Progress bar (in header stats) */
 
 .progress-ring {
