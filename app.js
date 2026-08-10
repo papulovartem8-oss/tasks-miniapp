@@ -3,6 +3,12 @@ if (tg) { tg.ready(); tg.expand(); }
 
 const DEMO_MODE = !tg?.CloudStorage;
 
+const splash = document.getElementById('splash');
+setTimeout(() => {
+    splash.classList.add('splash--hide');
+    setTimeout(() => splash.remove(), 600);
+}, 2200);
+
 const WEEKDAYS = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 const MONTHS = [
     'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
