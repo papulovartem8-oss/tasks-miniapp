@@ -369,14 +369,40 @@ body {
     opacity: 1;
 }
 
-.task__text {
+.task__body {
     flex: 1;
+    min-width: 0;
+}
+
+.task__text {
     font-size: 16px;
     font-weight: 500;
     line-height: 1.4;
     color: var(--text);
     transition: all 0.3s var(--transition);
     word-break: break-word;
+}
+
+.task__deadline-info {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.task__deadline-info--soon {
+    color: #FF9500;
+}
+
+.task__deadline-info--overdue {
+    color: #FF3B30;
+}
+
+.task--done .task__deadline-info {
+    color: var(--text-completed);
 }
 
 .task--done .task__text {
@@ -614,6 +640,87 @@ body {
 .sheet__send:disabled {
     opacity: 0.3;
     cursor: default;
+}
+
+.sheet__deadline-btn {
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: var(--card);
+    color: var(--silver);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.25s var(--spring);
+    flex-shrink: 0;
+}
+
+.sheet__deadline-btn:active {
+    transform: scale(0.88);
+}
+
+.sheet__deadline-btn--active {
+    background: #FF9500;
+    color: white;
+}
+
+.sheet__deadline-row {
+    display: none;
+    gap: 8px;
+    align-items: center;
+    margin-top: 10px;
+    animation: fadeIn 0.25s var(--transition);
+}
+
+.sheet__deadline-row--visible {
+    display: flex;
+}
+
+.sheet__deadline-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.sheet__deadline-input {
+    flex: 1;
+    height: 40px;
+    border: none;
+    background: var(--card);
+    border-radius: var(--radius-sm);
+    padding: 0 12px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    outline: none;
+    transition: background 0.2s var(--transition);
+}
+
+.sheet__deadline-input:focus {
+    background: var(--card-hover);
+}
+
+.sheet__deadline-clear {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s var(--transition);
+}
+
+.sheet__deadline-clear:active {
+    background: var(--card);
+    transform: scale(0.88);
 }
 
 .sheet__priority {

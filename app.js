@@ -14,6 +14,10 @@ const MONTHS = [
     'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
     'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
 ];
+const MONTHS_SHORT = [
+    'янв', 'фев', 'мар', 'апр', 'мая', 'июн',
+    'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'
+];
 
 let selectedDate = new Date();
 let calendarOffset = 0;
@@ -21,6 +25,8 @@ let tasks = [];
 let isSheetOpen = false;
 let idCounter = Date.now();
 let newTaskImportant = false;
+let newTaskDeadline = null;
+let pendingDeadlines = [];
 
 const taskList = document.getElementById('taskList');
 const emptyState = document.getElementById('emptyState');
@@ -37,9 +43,14 @@ const sheetOverlay = document.getElementById('sheetOverlay');
 const taskInput = document.getElementById('taskInput');
 const sendBtn = document.getElementById('sendBtn');
 const priorityBtn = document.getElementById('priorityBtn');
+const deadlineBtn = document.getElementById('deadlineBtn');
+const deadlineRow = document.getElementById('deadlineRow');
+const deadlineInput = document.getElementById('deadlineInput');
+const deadlineClear = document.getElementById('deadlineClear');
 
 renderCalendar();
 loadTasks();
+setupMainButton();
 
 calLeft.addEventListener('click', () => { calendarOffset -= 7; renderCalendar(); });
 calRight.addEventListener('click', () => { calendarOffset += 7; renderCalendar(); });
@@ -48,11 +59,74 @@ sheetOverlay.addEventListener('click', closeSheet);
 taskInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') addTask(); });
 sendBtn.addEventListener('click', addTask);
 priorityBtn.addEventListener('click', togglePriority);
+deadlineBtn.addEventListener('click', toggleDeadlinePicker);
+deadlineClear.addEventListener('click', clearDeadline);
+deadlineInput.addEventListener('change', onDeadlineChange);
 
 function togglePriority() {
     newTaskImportant = !newTaskImportant;
     priorityBtn.classList.toggle('sheet__priority--active', newTaskImportant);
     haptic('impact', 'light');
+}
+
+function toggleDeadlinePicker() {
+    const isVisible = deadlineRow.classList.contains('sheet__deadline-row--visible');
+    if (isVisible) {
+        clearDeadline();
+    } else {
+        deadlineRow.classList.add('sheet__deadline-row--visible');
+        deadlineBtn.classList.add('sheet__deadline-btn--active');
+        const now = new Date();
+        now.setHours(now.getHours() + 1, 0, 0, 0);
+        deadlineInput.min = toLocalISO(new Date());
+        deadlineInput.value = toLocalISO(now);
+        newTaskDeadline = now.toISOString();
+    }
+    haptic('impact', 'light');
+}
+
+function clearDeadline() {
+    deadlineRow.classList.remove('sheet__deadline-row--visible');
+    deadlineBtn.classList.remove('sheet__deadline-btn--active');
+    deadlineInput.value = '';
+    newTaskDeadline = null;
+}
+
+function onDeadlineChange() {
+    if (deadlineInput.value) {
+        newTaskDeadline = new Date(deadlineInput.value).toISOString();
+        deadlineBtn.classList.add('sheet__deadline-btn--active');
+    } else {
+        newTaskDeadline = null;
+        deadlineBtn.classList.remove('sheet__deadline-btn--active');
+    }
+}
+
+function toLocalISO(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    const h = String(date.getHours()).padStart(2, '0');
+    const min = String(date.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${d}T${h}:${min}`;
+}
+
+function formatDeadline(isoStr) {
+    const d = new Date(isoStr);
+    const day = d.getDate();
+    const month = MONTHS_SHORT[d.getMonth()];
+    const h = String(d.getHours()).padStart(2, '0');
+    const m = String(d.getMinutes()).padStart(2, '0');
+    return `${day} ${month}, ${h}:${m}`;
+}
+
+function getDeadlineStatus(isoStr) {
+    const now = new Date();
+    const deadline = new Date(isoStr);
+    const diff = deadline - now;
+    if (diff < 0) return 'overdue';
+    if (diff < 24 * 60 * 60 * 1000) return 'soon';
+    return 'normal';
 }
 
 function formatDate(date) {
@@ -199,6 +273,15 @@ function createTaskElement(task) {
 
     const priorityDot = task.important ? '<div class="task__priority-dot"></div>' : '';
 
+    let deadlineHtml = '';
+    if (task.deadline) {
+        const status = getDeadlineStatus(task.deadline);
+        const statusClass = status === 'overdue' ? ' task__deadline-info--overdue' :
+                            status === 'soon' ? ' task__deadline-info--soon' : '';
+        const icon = status === 'overdue' ? '🔴' : status === 'soon' ? '🟠' : '🕐';
+        deadlineHtml = `<div class="task__deadline-info${statusClass}">${icon} ${formatDeadline(task.deadline)}</div>`;
+    }
+
     el.innerHTML = `
         <div class="task__check">
             <svg class="task__checkmark" width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -206,7 +289,10 @@ function createTaskElement(task) {
             </svg>
         </div>
         ${priorityDot}
-        <span class="task__text">${escapeHtml(task.text)}</span>
+        <div class="task__body">
+            <span class="task__text">${escapeHtml(task.text)}</span>
+            ${deadlineHtml}
+        </div>
         <button class="task__delete" aria-label="Удалить">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -235,7 +321,8 @@ function addTask() {
         text,
         date: formatDate(selectedDate),
         completed: false,
-        important: newTaskImportant
+        important: newTaskImportant,
+        deadline: newTaskDeadline || null
     };
     tasks.push(task);
 
@@ -244,8 +331,19 @@ function addTask() {
 
     saveTasks(task.date, tasks);
 
+    if (task.deadline) {
+        pendingDeadlines.push({
+            text: task.text,
+            deadline: task.deadline,
+            date: task.date,
+            important: task.important
+        });
+        updateMainButton();
+    }
+
     newTaskImportant = false;
     priorityBtn.classList.remove('sheet__priority--active');
+    clearDeadline();
 
     sendBtn.disabled = false;
     closeSheet();
@@ -315,6 +413,7 @@ function closeSheet() {
     taskInput.blur();
     newTaskImportant = false;
     priorityBtn.classList.remove('sheet__priority--active');
+    clearDeadline();
 }
 
 function showEmpty(visible) {
@@ -323,6 +422,32 @@ function showEmpty(visible) {
 
 function showLoading(visible) {
     loading.classList.toggle('loading--visible', visible);
+}
+
+function setupMainButton() {
+    if (!tg?.MainButton) return;
+    tg.MainButton.onClick(() => {
+        syncDeadlines();
+    });
+}
+
+function updateMainButton() {
+    if (!tg?.MainButton) return;
+    if (pendingDeadlines.length > 0) {
+        tg.MainButton.setText('Сохранить напоминания (' + pendingDeadlines.length + ')');
+        tg.MainButton.color = '#FF9500';
+        tg.MainButton.textColor = '#FFFFFF';
+        tg.MainButton.show();
+    }
+}
+
+function syncDeadlines() {
+    if (!tg || pendingDeadlines.length === 0) return;
+    const data = JSON.stringify({
+        action: 'sync_deadlines',
+        deadlines: pendingDeadlines
+    });
+    tg.sendData(data);
 }
 
 function haptic(type, style) {
