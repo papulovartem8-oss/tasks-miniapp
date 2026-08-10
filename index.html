@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Мои задачи</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <div class="header__top">
+                <h1 class="header__title">Мои задачи</h1>
+                <div class="header__stats" id="stats">
+                    <span class="stats__done" id="statsDone">0</span>
+                    <span class="stats__sep">/</span>
+                    <span class="stats__total" id="statsTotal">0</span>
+                </div>
+            </div>
+            <p class="header__date" id="headerDate"></p>
+        </header>
+
+        <div class="calendar">
+            <button class="calendar__arrow calendar__arrow--left" id="calLeft">‹</button>
+            <div class="calendar__strip" id="calendarStrip"></div>
+            <button class="calendar__arrow calendar__arrow--right" id="calRight">›</button>
+        </div>
+
+        <div class="tasks-container">
+            <div class="tasks" id="taskList"></div>
+
+            <div class="empty" id="emptyState">
+                <div class="empty__icon">
+                    <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+                        <rect x="12" y="8" width="40" height="48" rx="4" stroke="#C7C7CC" stroke-width="2"/>
+                        <line x1="20" y1="20" x2="44" y2="20" stroke="#E5E5EA" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="20" y1="28" x2="38" y2="28" stroke="#E5E5EA" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="20" y1="36" x2="42" y2="36" stroke="#E5E5EA" stroke-width="2" stroke-linecap="round"/>
+                        <line x1="20" y1="44" x2="34" y2="44" stroke="#E5E5EA" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </div>
+                <p class="empty__text">Нет задач на этот день</p>
+                <p class="empty__sub">Нажмите + чтобы добавить</p>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="loading__spinner"></div>
+            </div>
+        </div>
+
+        <button class="fab" id="fabBtn">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <line x1="12" y1="5" x2="12" y2="19" stroke="white" stroke-width="2" stroke-linecap="round"/>
+                <line x1="5" y1="12" x2="19" y2="12" stroke="white" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+        </button>
+
+        <div class="sheet" id="addSheet">
+            <div class="sheet__overlay" id="sheetOverlay"></div>
+            <div class="sheet__content" id="sheetContent">
+                <div class="sheet__handle"></div>
+                <div class="sheet__input-wrap">
+                    <input type="text" class="sheet__input" id="taskInput" placeholder="Новая задача..." maxlength="200" autocomplete="off">
+                    <button class="sheet__send" id="sendBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M3 10L17 10M17 10L11 4M17 10L11 16" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
