@@ -530,13 +530,9 @@ body {
 }
 
 .fab--open {
-    transform: rotate(45deg);
-    background: var(--text-secondary);
-    bottom: calc(max(20px, env(safe-area-inset-bottom)) + 76px);
-}
-
-.fab--open:active {
-    transform: rotate(45deg) scale(0.88);
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.5);
 }
 
 /* Bottom Sheet */
@@ -582,12 +578,41 @@ body {
     transform: translateY(0);
 }
 
+.sheet__header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 16px;
+}
+
 .sheet__handle {
     width: 36px;
     height: 4px;
     background: var(--border);
     border-radius: 2px;
-    margin: 0 auto 16px;
+}
+
+.sheet__close {
+    position: absolute;
+    right: -4px;
+    top: -4px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--card);
+    color: var(--text-secondary);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s var(--transition);
+}
+
+.sheet__close:active {
+    background: var(--card-hover);
+    transform: scale(0.88);
 }
 
 .sheet__input-wrap {
